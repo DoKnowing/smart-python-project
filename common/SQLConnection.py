@@ -66,7 +66,7 @@ class SQLConnection(object):
         :return:
         """
         if size <= 0:
-            raise Exception("size can't lower zero")
+            raise Exception("size can't lower zero,size=", size)
         self.__cursor.execute(sql)
         self.__cursor.scroll(position, mode)
         return self.__cursor.fetchmany(size)
@@ -93,6 +93,30 @@ class SQLConnection(object):
         """
         success = self.__cursor.executemany(sql, args)
         self.__conn.commit()
+        return success
+
+    def batch(self, sqls, is_ignore=False):
+        """
+        批量执行SQL
+
+        :param sqls: sql语句,数组
+        :param is_ignore: 是否忽略异常SQL
+        :return:
+        """
+        if sqls is None or len(sqls) == 0:
+            return 0
+        success = 0
+        try:
+            for sql in sqls:
+                success += self.__cursor.execute(sql)
+        except Exception, e:
+            msg = "SQL=" + sql + " execute exception. "
+            if is_ignore:
+                print msg, e
+            else:
+                raise Exception(msg, e)
+        if success > 0:
+            self.__conn.commit()
         return success
 
     def close(self):
