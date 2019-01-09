@@ -1,0 +1,32 @@
+{
+  "ip": {
+    "dynamic_templates": [
+      {
+        "strings": {
+          "mapping": {
+            "type": "keyword"
+          },
+          "match": "*",
+          "match_mapping_type": "string"
+        }
+      }
+    ],
+    "_all": {
+      "enabled": false
+    },
+    "properties": {
+      "ip_addr": {
+        "type": "ip"
+      },
+      "port": {
+        "type": "keyword"
+      },
+      "city": {
+        "type": "keyword"
+      },
+      "country": {
+        "type": "keyword"
+      }
+    }
+  }
+}
