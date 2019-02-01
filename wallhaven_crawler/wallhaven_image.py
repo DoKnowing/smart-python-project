@@ -27,9 +27,18 @@ HEADER = {
 DIR_PATH = "D:/tmp/data/wallhaven_image/"
 
 # URL句柄
+# 可选条件,后期新增
+# categories : 第一个1:general, 第二个1: anime(日本动漫) ,第三个1: people
+# purity : 第一个1: sfw(shell fragment wound), 第二个1: sketchy(科幻)
+# sorting : relevance,toplist,random..
+# order : desc,asc
+# resolutions : 像素,如: 3840x2880, 可选
+# topRange : 1d,3d,1w,1M,3M,6M,1y 可选
 SEARCH_URL = "https://alpha.wallhaven.cc/search?q={0}&categories=111&purity=100&sorting=relevance&order=desc&page={1}"
+
 TOP_LIST_URL = "https://alpha.wallhaven.cc/toplist?page={0}"
 LATEST_URL = "https://alpha.wallhaven.cc/latest?page={0}"
+RANDOM_URL = "https://alpha.wallhaven.cc/random?page={0}"
 
 # 完整图片路径
 IMAGE_DETAIL_URL = "https://alpha.wallhaven.cc/wallpaper/{0}"
@@ -42,7 +51,7 @@ SQL_CONN = SQLConnection()
 argparser = argparse.ArgumentParser()
 argparser.add_argument(
     "action_type",
-    choices=["query", "top_list", "latest"],
+    choices=["query", "top_list", "latest", "random"],
     help="query: 查询指定内容,必须添加 --query_value 参数, top_list: 获取top列表, latest: 获取最近访问内容")
 
 argparser.add_argument("-v", "--value", help="查询内容")
@@ -105,6 +114,9 @@ def get_image_full_url(action_type, page, value=None):
         elif "latest" == action_type:
             url = str.format(LATEST_URL, current_page)
             LOG.info("get the image id of latest in wallhaven ,Page=" + str(current_page) + " ,url=" + url)
+        elif "random" == action_type:
+            url = str.format(RANDOM_URL, current_page)
+            LOG.info("get the image id of random in wallhaven ,Page=" + str(current_page) + " ,url=" + url)
         elif "query" == action_type:
             if value is None or value.strip() == "":
                 raise Exception("query value can't be empty or NULL, value=" + str(value))
