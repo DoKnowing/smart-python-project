@@ -57,7 +57,7 @@ HEADER = {
 }
 
 
-def request_get(url, proxy_ip=None, cookies=None, cookies_flag=False, header=None):
+def request_get(url, proxy_ip=None, cookies=None, cookies_flag=False, header=None, timeout=30):
     """
     伪装浏览器打开网页,是否添加代理
 
@@ -93,7 +93,7 @@ def request_get(url, proxy_ip=None, cookies=None, cookies_flag=False, header=Non
         for key in header.keys():
             request.add_header(key, header[key])
 
-    text = urllib2.urlopen(request).read()
+    text = urllib2.urlopen(request, timeout=timeout).read()
     return text
 
 
