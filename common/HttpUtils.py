@@ -7,7 +7,7 @@ import urllib2
 import random
 
 # 伪装为浏览器
-USER_AGENTS = [
+DEFAULT_USER_AGENTS = [
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
     "Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 6.0; Acoo Browser; SLCC1; .NET CLR 2.0.50727; Media Center PC 5.0; .NET CLR 3.0.04506)",
     "Mozilla/4.0 (compatible; MSIE 7.0; AOL 9.5; AOLBuild 4337.35; Windows NT 5.1; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
@@ -43,33 +43,25 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11",
     "Mozilla/5.0 (X11; U; Linux x86_64; zh-CN; rv:1.9.2.10) Gecko/20100922 Ubuntu/10.10 (maverick) Firefox/3.6.10"
 ]
-#
-# HEADER = {
-#     'User-Agent': random.choice(USER_AGENTS),
-#     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-#     'Accept-Language': 'en-US,en;q=0.5',
-#     'Connection': 'keep-alive',
-#     'Accept-Encoding': 'gzip, deflate',
-#     'Content-Type': 'text/html;charset=UTF-8'
-# }
-HEADER = {
-    'User-Agent': random.choice(USER_AGENTS)
+
+DEFAULT_HEADER = {
+    "User-Agent": random.choice(DEFAULT_USER_AGENTS)
 }
 
 
-def request_get(url, proxy_ip=None, cookies=None, cookies_flag=False, header=None, timeout=30):
+def request_get(url, header=None, proxy_ip=None, cookies_flag=False, timeout=60):
     """
-    伪装浏览器打开网页,是否添加代理
+    伪装浏览器打开网页,Get方式\r\n
 
-    proxy_ip = {"http":"127.0.0.1:8080"}
-    cookies = "PHPSESSID=91rurfqm2329bopnosfu4fvmu7; kmsign=55d2c12c9b1e3; KMUID=b6Ejc1XSwPq9o756AxnBAg="
+    header = {"User-Agent": "Mozilla/5.0..."} \r\n
+    proxy_ip = {"http":"127.0.0.1:8080"} 或者  {"https":"127.0.0.1:8080"}
 
-    :param url:
-    :param proxy_ip: 代理IP
-    :param cookies: 手动添加cookies
-    :param cookies_flag:
-    :param header: 请求头
-    :return:
+    :param url: 链接(http/https)
+    :param header: 请求头,建议自定义,默认只添加 User-Agent
+    :param proxy_ip: 代理IP,对应链接添加http/https代理
+    :param cookies_flag: 添加Cookie,建议直接在header中添加
+    :param timeout: 超时,默认60秒
+    :return: 返回请求响应
     """
     # 添加代理
     if proxy_ip is not None:
@@ -84,11 +76,9 @@ def request_get(url, proxy_ip=None, cookies=None, cookies_flag=False, header=Non
         cookies_opener = urllib2.build_opener(cookie_support)
         urllib2.install_opener(cookies_opener)
 
-    # Requst
-    request = urllib2.Request(url=url, headers=HEADER)
-    # 手动添加 Cookies
-    if cookies is not None:
-        request.add_header("cookies", cookies)
+    # Request
+    request = urllib2.Request(url=url, headers=DEFAULT_HEADER)
+    # 手动添加其他请求头
     if header is not None:
         for key in header.keys():
             request.add_header(key, header[key])
@@ -97,19 +87,21 @@ def request_get(url, proxy_ip=None, cookies=None, cookies_flag=False, header=Non
     return text
 
 
-def request_post(url, params, proxy_ip=None, cookies=None, cookies_flag=False, header=None):
+def request_post(url, params, header=None, proxy_ip=None, cookies_flag=False, timeout=60):
     """
-    伪装浏览器打开网页,是否添加代理
+    伪装浏览器打开网页,Post方式\r\n
 
-    proxy_ip = {"http":"127.0.0.1:8080"}
-    cookies = "PHPSESSID=91rurfqm2329bopnosfu4fvmu7; kmsign=55d2c12c9b1e3; KMUID=b6Ejc1XSwPq9o756AxnBAg="
+    params = 请求的具体参数，不一定是json \r\n
+    header = {"User-Agent": "Mozilla/5.0..."} \r\n
+    proxy_ip = {"http":"127.0.0.1:8080"} 或者  {"https":"127.0.0.1:8080"}
 
-    :param url:
-    :param proxy_ip: 代理IP
-    :param cookies: 手动添加cookies
-    :param cookies_flag:
-    :param header: 请求头
-    :return:
+    :param url: 链接(http/https)
+    :param params: 请求参数,json,urlencode编码等
+    :param header: 请求头,建议自定义,默认只添加 User-Agent
+    :param proxy_ip: 代理IP,对应链接添加http/https代理
+    :param cookies_flag: 添加Cookie,建议直接在header中添加
+    :param timeout: 超时,默认60秒
+    :return: 返回请求响应
     """
     # 添加代理
     if proxy_ip is not None:
@@ -124,14 +116,12 @@ def request_post(url, params, proxy_ip=None, cookies=None, cookies_flag=False, h
         cookies_opener = urllib2.build_opener(cookie_support)
         urllib2.install_opener(cookies_opener)
 
-    # Requst
-    request = urllib2.Request(url=url, data=params, headers=HEADER)
-    # 手动添加 Cookies
-    if cookies is not None:
-        request.add_header("cookies", cookies)
+    # Request
+    request = urllib2.Request(url=url, data=params, headers=DEFAULT_HEADER)
+    # 手动添加其他请求头
     if header is not None:
         for key in header.keys():
             request.add_header(key, header[key])
 
-    text = urllib2.urlopen(request).read()
+    text = urllib2.urlopen(request, timeout=timeout).read()
     return text
