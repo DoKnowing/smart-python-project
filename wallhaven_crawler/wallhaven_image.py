@@ -20,7 +20,7 @@ from common.SQLConnection import SQLConnection
 from common.TimeUtils import date_format
 
 HEADER = {
-    ":authority": "alpha.wallhaven.cc",
+    # ":authority": "alpha.wallhaven.cc",
     "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36",
 }
 
@@ -83,13 +83,19 @@ def browser_page(browser_url):
     image_ids = []
     # url校验
     if browser_url is None or (not browser_url.startswith("http://") and not browser_url.startswith("https://")):
-        LOG.error(u"illegal url which is : " + str(browser_url))
+        LOG.error("illegal url which is : " + str(browser_url))
         return image_ids
-
-    try:
-        bs = BeautifulSoup(request_get(browser_url, header=HEADER), "html5lib")
-    except Exception, e:
-        ## 此处不进行重试
+    retry = 3
+    bs = None
+    while retry > 0:
+        try:
+            bs = BeautifulSoup(request_get(browser_url, header=HEADER), "html5lib")
+            break
+        except Exception, e:
+            ## 此处不进行重试
+            retry -= 1
+            LOG.warning("get image ids failed, url=" + browser_url + " ,Error: " + e.message + ", Retry " + str(3 - retry))
+    if bs is None:
         LOG.error("get image ids failed, url=" + browser_url + " ,Error: " + e.message)
         return image_ids
 
@@ -140,10 +146,11 @@ def get_image_full_url(action_type, page, value=None):
         LOG.info("select image which had been download, SQL= " + sql)
         download_image_ids = {}  # 已经下载的图片id
         for image_id in SQL_CONN.select(sql):
-            download_image_ids.setdefault(image_id[0], "")
+            download_image_ids.setdefault(str(image_id[0]), "")
+        LOG.debug(str(download_image_ids.keys()) + " has been download")
 
         for id in image_ids:
-            if id not in download_image_ids:
+            if id not in download_image_ids.keys():
                 # 获取url
                 detail_url = str.format(IMAGE_DETAIL_URL, id)
                 # 根据具体的url获取原始路径
@@ -167,6 +174,8 @@ def get_image_full_url(action_type, page, value=None):
                 except Exception, e:
                     LOG.error(
                         "image=" + image_full_url + " download fail or insert into Mysql fail, Error:" + e.message)
+            else:
+                LOG.info(str(id) + " has been download")
         current_page += 1
     LOG.info("download image count : " + str(count) + " ,action_type=" + action_type + ",value=" + str(value))
 
