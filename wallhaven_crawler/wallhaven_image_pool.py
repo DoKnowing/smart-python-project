@@ -4,12 +4,17 @@
 """description
 采用多线程版下载图片
 """
+import sys
+
+# python 本地执行需要,对其他没有影响
+sys.path.append("D:/smart_workspace/smart-python-project")
+
 import os
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
-import time
+import time, random
 import argparse
-from common.HttpUtils import request_get
+from common.HttpUtils import req_get_image
 from common.Log import Log
 from common.SQLConnection import SQLConnection
 from common.TimeUtils import date_format
@@ -48,13 +53,14 @@ def download_image(image_url, file_name):
     :return:
     """
     try:
-        res = request_get(image_url, header=HEADER)
-        image = open(DIR_PATH + file_name, "wb")
-        image.write(res)
-        image.close()
-        return None
-    except Exception, e:
-        return e
+        res, image_size = req_get_image(image_url, header=HEADER, min_size=1024 * 1024)
+        if res is not None:
+            image = open(DIR_PATH + file_name, "wb")
+            image.write(res)
+            image.close()
+        return None, image_size
+    except Exception as e:
+        return e, 0
 
 
 def download_thread(start, end):
@@ -77,7 +83,7 @@ def download_thread(start, end):
                 if SQL_CONN.select(sql)[0][0] == 1:
                     LOG.info(str(image_id) + ' had downloaded, continue')
                     continue
-            except Exception, e:
+            except Exception as e:
                 LOG.warning(str(image_id) + 'don\'t find , skip it. Error: ' + e.message)
                 continue
             finally:
@@ -86,23 +92,25 @@ def download_thread(start, end):
         download_url = str.format(IMAGE_FULL_URL, str(image_id), 'jpg')
         # 1. 开始下载图片
         try:
-            e = download_image(download_url, os.path.basename(download_url))
+            e, image_size = download_image(download_url, os.path.basename(download_url))
             # 尝试使用png下载
             if e is not None:
                 download_url = str.format(IMAGE_FULL_URL, str(image_id), 'png')
-                e = download_image(download_url, os.path.basename(download_url))
+                e, image_size = download_image(download_url, os.path.basename(download_url))
 
             if e is None:
                 LOG.info('download image success ,url=' + download_url)
                 # 2. 下载完成后,写入数据库,此处需要加锁,防止重复写
-                insert = "insert into t_smart_crawler_wallhaven (image_id,image_url,download_date) values('" + \
-                         str(image_id) + "','" + download_url + "','" + date_format(long(time.time())) + "')"
+                insert = "insert into t_smart_crawler_wallhaven (image_id,image_url,download_date,image_size) values('" + \
+                         str(image_id) + "','" + download_url + "','" + date_format(long(time.time())) + "','" + \
+                         str(image_size) + "')"
+                time.sleep(random.randint(1, 1000) * 1.0 / 1000)
                 SQL_CONN.execute(insert)
                 LOG.info("Insert download image info success, SQL=" + insert)
                 download_success += 1
             else:
                 LOG.warning(str(image_id) + ' download error , url=' + download_url + ' ,ErrorMsg=' + e.msg)
-        except Exception, e:
+        except Exception as e:
             LOG.error("image=" + download_url + " download fail or insert into Mysql fail, Error:" + e.message)
     return download_success
 
@@ -124,12 +132,14 @@ def thread_allocation_task(workers, start, end):
         avg_num = (end - start) / workers
         for i in range(0, workers):
             # 前N-1个都可以均匀分配
-            if i + 1 < workers:
-                task = [start, (i + 1) * avg_num]
+            if i == 0:
+                task = [start, start + avg_num]
+            elif i + 1 < workers:
+                task = [start + 1, start + avg_num]
             else:
-                task = [start, end]
+                task = [start + 1, end]
             tasks.append(task)
-            start = (i + 1) * avg_num + 1
+            start += avg_num
     return tasks
 
 
@@ -137,18 +147,11 @@ def pool_download(workers=2, start=1, end=100):
     LOG.info('download start=' + str(start) + ' ,end=' + str(end) + ' ,total=' + str(end - start + 1))
     pool = ThreadPoolExecutor(max_workers=workers)
     futures = []
-    no_finished = 0
     success = 0
     for task in thread_allocation_task(workers, start, end):
-        future = pool.submit(download_thread, task[0], task[1])
-        futures.append(future)
-        no_finished += 1
-
-    while no_finished >= 1:
-        for future in futures:
-            if future.done():
-                no_finished -= 1
-                success += future.result()
+        futures.append(pool.submit(download_thread, task[0], task[1]))
+    for future in as_completed(futures):
+        success += future.result()
     time.sleep(5)
     LOG.info('download image pool finished, success : ' + str(success) + ' ,total : ' + str(end - start + 1))
 
@@ -165,4 +168,5 @@ if __name__ == "__main__":
         raise Exception('params of end must be grater zero,end=' + str(end))
     if end == 1:
         end = start + 10
+    download_image_counter = start
     pool_download(workers, start, end)

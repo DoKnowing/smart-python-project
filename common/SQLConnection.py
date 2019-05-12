@@ -29,7 +29,7 @@ class SQLConnection(object):
 
         self.__conn = pymysql.connect(host=CONFIG.get('db', 'host'), port=CONFIG.getint('db', 'port'),
                                       user=CONFIG.get('db', 'user'), passwd=CONFIG.get('db', 'passwd'),
-                                      db=CONFIG.get('db', 'db'),
+                                      db=CONFIG.get('db', 'db'), connect_timeout=60,
                                       charset='utf8')
         self.__cursor = self.__conn.cursor()
         pass

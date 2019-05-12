@@ -1,6 +1,7 @@
 # coding=utf-8
 # __author__: 737082820@qq.com(smart)
 
+import sys
 
 import cookielib
 import urllib2
@@ -125,3 +126,30 @@ def request_post(url, params, header=None, proxy_ip=None, cookies_flag=False, ti
 
     text = urllib2.urlopen(request, timeout=timeout).read()
     return text
+
+
+def req_get_image(url, header=None, timeout=60, min_size=0, max_size=sys.maxint):
+    """
+    GET 请求下载图片
+
+
+    :param url: 链接(http/https)
+    :param header: 请求头,建议自定义,默认只添加 User-Agent
+    :param timeout: 超时,默认60秒
+    :param max_size: 最大值,单位: byte
+    :param min_size: 最小值,单位: byte
+    :return: 返回请求响应
+    """
+    # Request
+    request = urllib2.Request(url=url, headers=DEFAULT_HEADER)
+    # 手动添加其他请求头
+    if header is not None:
+        for key in header.keys():
+            request.add_header(key, header[key])
+
+    response = urllib2.urlopen(request, timeout=timeout)
+    # 对比图片大小
+    img_size = int(response.headers['Content-Length'])
+    if min_size <= img_size <= max_size:
+        return response.read(), img_size
+    return None, img_size
